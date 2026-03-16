@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Instrument Sans", "Segoe UI", sans-serif;
+  --color-background: oklch(0.97 0.01 95);
+  --color-foreground: oklch(0.2 0.02 240);
+  --color-card: oklch(0.995 0 0);
+  --color-card-foreground: oklch(0.2 0.02 240);
+  --color-popover: oklch(0.995 0 0);
+  --color-popover-foreground: oklch(0.2 0.02 240);
+  --color-primary: oklch(0.55 0.16 218);
+  --color-primary-foreground: oklch(0.99 0.01 230);
+  --color-secondary: oklch(0.92 0.03 90);
+  --color-secondary-foreground: oklch(0.28 0.02 240);
+  --color-muted: oklch(0.94 0.01 240);
+  --color-muted-foreground: oklch(0.52 0.02 240);
+  --color-accent: oklch(0.87 0.06 175);
+  --color-accent-foreground: oklch(0.24 0.02 220);
+  --color-destructive: oklch(0.62 0.23 25);
+  --color-border: oklch(0.88 0.01 240);
+  --color-input: oklch(0.88 0.01 240);
+  --color-ring: oklch(0.55 0.16 218);
+  --radius: 1rem;
+}
+
+:root {
+  color: var(--color-foreground);
+  background:
+    radial-gradient(circle at top left, color-mix(in oklab, #f8d7a1 45%, transparent) 0, transparent 30%),
+    radial-gradient(circle at top right, color-mix(in oklab, #a8d8d0 55%, transparent) 0, transparent 32%),
+    linear-gradient(180deg, #fcfbf8 0%, #f4f1eb 100%);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

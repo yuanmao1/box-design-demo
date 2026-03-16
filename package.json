@@ -1,0 +1,18 @@
+{
+  "name": "box-design-demo",
+  "version": "1.0.50",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:wasm": "cd packages/geo-core && zig build -Doptimize=ReleaseSmall && cp zig-out/bin/geo-core.wasm ../../apps/frontend/public/geo-core.wasm",
+    "test:geo-core": "cd packages/geo-core && zig build test",
+    "dev:frontend": "bun run --filter './apps/frontend' dev",
+    "dev:backend": "bun run --filter './apps/backend' dev",
+    "build:frontend": "bun run --filter './apps/frontend' build",
+    "check:frontend": "bun run --filter './apps/frontend' check",
+    "test:frontend": "bun run --filter './apps/frontend' test"
+  }
+}

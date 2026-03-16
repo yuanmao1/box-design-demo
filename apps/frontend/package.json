@@ -1,0 +1,41 @@
+{
+  "name": "@box-design/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bunx vite",
+    "test": "bun test",
+    "check": "bunx tsc -b --pretty false",
+    "build": "bun run check && bunx vite build",
+    "build:analyze": "bun run check && bunx vite build --mode analyze",
+    "preview": "bunx vite preview"
+  },
+  "dependencies": {
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slider": "^1.3.6",
+    "@radix-ui/react-slot": "^1.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.511.0",
+    "tailwind-merge": "^3.3.0",
+    "three": "^0.172.0",
+    "@react-three/fiber": "^9.0.0",
+    "@react-three/drei": "^10.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.172.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.7.0",
+    "vite": "^6.2.0"
+  }
+}

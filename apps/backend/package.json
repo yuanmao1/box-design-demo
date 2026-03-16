@@ -1,0 +1,16 @@
+{
+  "name": "@box-design/backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "elysia": "latest",
+    "@elysiajs/static": "latest",
+    "@elysiajs/cors": "latest"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}
