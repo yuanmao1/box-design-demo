@@ -13,13 +13,12 @@ import {
   projectContentQuad,
   unprojectSurfacePoint,
 } from "@/lib/preview-3d";
+import { log3DDebug } from "@/lib/debug-3d";
 import type {
   OutputContentPlacement,
   Preview3DNode,
   SurfaceFrame2D,
 } from "@/types/api";
-
-const DEBUG_3D_TEXTURE = true;
 export interface PanelTextureAsset {
   canvas: HTMLCanvasElement | null;
   status: ContentBitmapStatus;
@@ -107,21 +106,16 @@ async function composePanelTexture(
   }
 
   fillPanelBase(context, canvas.width, canvas.height);
-
-  if (DEBUG_3D_TEXTURE) {
-    console.groupCollapsed(
-      `[3DTexture] panel ${node.panel_id ?? "unknown"} compose`,
-    );
-    console.log("frame", frame);
-    console.log("textureSize", textureSize);
-    console.log("contents", contents.map(summarizeContent));
-  }
+  log3DDebug(`panel ${node.panel_id ?? "unknown"} compose`, {
+    textureSize,
+    contentCount: contents.length,
+  });
 
   if (contents.length === 0) {
-    if (DEBUG_3D_TEXTURE) {
-      console.log("result", { status: "empty", reason: "no contents" });
-      console.groupEnd();
-    }
+    log3DDebug(`panel ${node.panel_id ?? "unknown"} compose result`, {
+      status: "empty",
+      reason: "no contents",
+    });
     return { canvas, status: "empty" };
   }
 
@@ -156,18 +150,13 @@ async function composePanelTexture(
     const asset = await loadContentBitmapCanvas(request);
 
     status = mergeStatus(status, asset.status);
-    if (DEBUG_3D_TEXTURE) {
-      console.log(`[3DTexture] content ${content.id}`, {
-        transform: content.transform,
-        quad,
-        pixelQuad,
-        widthPx,
-        heightPx,
-        request,
-        assetStatus: asset.status,
-        hasBitmapCanvas: Boolean(asset.canvas),
-      });
-    }
+    log3DDebug(`content ${content.id} bitmap`, {
+      widthPx,
+      heightPx,
+      request,
+      assetStatus: asset.status,
+      hasBitmapCanvas: Boolean(asset.canvas),
+    });
     if (!asset.canvas) {
       continue;
     }
@@ -178,17 +167,10 @@ async function composePanelTexture(
     context.restore();
   }
 
-  if (DEBUG_3D_TEXTURE) {
-    console.log("result", {
-      status,
-      canvasSize: { width: canvas.width, height: canvas.height },
-      previewDataUrl:
-        typeof canvas.toDataURL === "function"
-          ? canvas.toDataURL("image/png").slice(0, 96)
-          : "unavailable",
-    });
-    console.groupEnd();
-  }
+  log3DDebug(`panel ${node.panel_id ?? "unknown"} compose result`, {
+    status,
+    canvasSize: { width: canvas.width, height: canvas.height },
+  });
 
   return { canvas, status };
 }
@@ -302,18 +284,6 @@ function createCanvas(width: number, height: number) {
   canvas.width = width;
   canvas.height = height;
   return canvas;
-}
-
-function summarizeContent(content: OutputContentPlacement) {
-  return {
-    id: content.id,
-    panelId: content.panel_id,
-    type: content.content.type,
-    zIndex: content.z_index,
-    transform: content.transform,
-    hasClipPath: Boolean(content.clip_path),
-    hasSurfaceFrame: Boolean(content.surface_frame),
-  };
 }
 
 function buildContentRequestForFrame(

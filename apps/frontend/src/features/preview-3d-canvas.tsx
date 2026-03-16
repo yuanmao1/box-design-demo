@@ -23,9 +23,8 @@ import {
   buildPreviewSceneData,
   fallbackSurfaceFrame,
 } from "@/lib/preview-3d";
+import { log3DDebug } from "@/lib/debug-3d";
 import type { GeneratedPackage } from "@/types/api";
-
-const DEBUG_3D_RENDER = true;
 
 export function Preview3DCanvas({
   result,
@@ -138,25 +137,19 @@ function PanelNode({
   const texture = usePanelTexture(sceneNode);
 
   useEffect(() => {
-    if (!DEBUG_3D_RENDER || !geometry || !frame) return;
+    if (!geometry || !frame) return;
 
-    console.groupCollapsed(
-      `[3DRender] panel ${sceneNode.node.panel_id ?? "unknown"} mesh`,
-    );
-    console.log("node", sceneNode.node);
-    console.log("worldMatrix", sceneNode.worldMatrix.elements);
-    console.log("frame", frame);
-    console.log("geometry", summarizeGeometry(geometry));
-    console.log("uvRange", summarizeUvRange(geometry));
-    console.log("contents", sceneNode.contents);
-    console.log("hasTexture", Boolean(texture));
-    if (texture?.image) {
-      console.log("textureImage", {
-        width: texture.image.width,
-        height: texture.image.height,
-      });
-    }
-    console.groupEnd();
+    log3DDebug(`panel ${sceneNode.node.panel_id ?? "unknown"} mesh`, {
+      geometry: summarizeGeometry(geometry),
+      uvRange: summarizeUvRange(geometry),
+      hasTexture: Boolean(texture),
+      textureImage: texture?.image
+        ? {
+            width: texture.image.width,
+            height: texture.image.height,
+          }
+        : null,
+    });
   }, [frame, geometry, sceneNode, texture]);
 
   if (!geometry) return null;
@@ -243,15 +236,13 @@ function usePanelTexture(
     let cancelled = false;
 
     loadPanelTextureCanvas(sceneNode.node, sceneNode.contents).then((asset) => {
-      if (DEBUG_3D_RENDER) {
-        console.log(`[3DRender] panel ${sceneNode.node.panel_id ?? "unknown"} texture asset`, {
-          status: asset.status,
-          hasCanvas: Boolean(asset.canvas),
-          canvasSize: asset.canvas
-            ? { width: asset.canvas.width, height: asset.canvas.height }
-            : null,
-        });
-      }
+      log3DDebug(`panel ${sceneNode.node.panel_id ?? "unknown"} texture asset`, {
+        status: asset.status,
+        hasCanvas: Boolean(asset.canvas),
+        canvasSize: asset.canvas
+          ? { width: asset.canvas.width, height: asset.canvas.height }
+          : null,
+      });
 
       if (cancelled || !asset.canvas) return;
 
@@ -266,19 +257,14 @@ function usePanelTexture(
       nextTexture.needsUpdate = true;
 
       setTexture(nextTexture);
-      if (DEBUG_3D_RENDER) {
-        console.log(
-          `[3DRender] panel ${sceneNode.node.panel_id ?? "unknown"} texture attached`,
-          {
-            uuid: nextTexture.uuid,
-            image: {
-              width: nextTexture.image.width,
-              height: nextTexture.image.height,
-            },
-            flipY: nextTexture.flipY,
-          },
-        );
-      }
+      log3DDebug(`panel ${sceneNode.node.panel_id ?? "unknown"} texture attached`, {
+        uuid: nextTexture.uuid,
+        image: {
+          width: nextTexture.image.width,
+          height: nextTexture.image.height,
+        },
+        flipY: nextTexture.flipY,
+      });
       invalidate();
     });
 
