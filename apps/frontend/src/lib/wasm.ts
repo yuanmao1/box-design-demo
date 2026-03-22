@@ -2,6 +2,7 @@ import type {
   GeneratedPackage,
   NumericParamValue,
   OutputContentPlacement,
+  SelectParamValue,
   TemplatesResponse,
 } from '@/types/api'
 
@@ -80,13 +81,26 @@ async function invokeJson<T>(fn: (exports: WasmExports, ptr: number, len: number
 }
 
 export async function listTemplates() {
-  return invokeJson<TemplatesResponse>((exports) => exports.list_templates())
+  const response = await invokeJson<TemplatesResponse>((exports) => exports.list_templates())
+  return {
+    templates: response.templates.map((template) => ({
+      ...template,
+      numeric_params: template.numeric_params ?? [],
+      select_params: template.select_params ?? [],
+    })),
+  }
 }
 
-export async function generatePackage(key: string, numericParams: NumericParamValue[], contents: OutputContentPlacement[]) {
+export async function generatePackage(
+  key: string,
+  numericParams: NumericParamValue[],
+  selectParams: SelectParamValue[],
+  contents: OutputContentPlacement[],
+) {
   return invokeJson<GeneratedPackage>((exports, ptr, len) => exports.generate_package(ptr, len), {
     key,
     numeric_params: numericParams,
+    select_params: selectParams,
     contents: contents.map((content) => ({
       id: content.id,
       panel_id: content.panel_id,

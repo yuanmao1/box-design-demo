@@ -7,15 +7,45 @@ import type { GeneratedPackage, OutputContentPlacement } from '@/types/api'
 const GRID_MINOR = 10
 const GRID_MAJOR = 50
 
+function lineworkStroke(role: GeneratedPackage['drawing_2d']['linework'][number]['role']) {
+  switch (role) {
+    case 'cut':
+      return '#2563eb'
+    case 'bleed':
+      return '#dc2626'
+    case 'safe':
+      return '#64748b'
+    case 'fold':
+    case 'score':
+      return '#2563eb'
+    case 'guide':
+      return '#94a3b8'
+  }
+}
+
+function lineworkStrokeWidth(role: GeneratedPackage['drawing_2d']['linework'][number]['role']) {
+  switch (role) {
+    case 'cut':
+    case 'bleed':
+      return 1.85
+    default:
+      return 1.25
+  }
+}
+
 export function DielinePreview({
   result,
+  onPanelClick,
 }: {
   result: GeneratedPackage['drawing_2d'] | null
+  onPanelClick?: (panelId: number) => void
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const clipIdPrefix = useId()
   const [camera, setCamera] = useState({ panX: 0, panY: 0, zoom: 1 })
-  const dragState = useRef<{ x: number; y: number } | null>(null)
+  const dragState = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+  const lastWasDrag = useRef(false)
+  const [hoveredPanelId, setHoveredPanelId] = useState<number | null>(null)
 
   const bounds = useMemo(() => computeDielineBounds(result), [result])
   const panelRects = useMemo(() => computePanelRects(result), [result])
@@ -53,7 +83,7 @@ export function DielinePreview({
   const transform = `translate(${centerX + camera.panX} ${centerY + camera.panY}) scale(${camera.zoom}) translate(${-centerX} ${-centerY})`
 
   const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
-    dragState.current = { x: event.clientX, y: event.clientY }
+    dragState.current = { x: event.clientX, y: event.clientY, moved: false }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
@@ -66,7 +96,8 @@ export function DielinePreview({
     const dx = ((event.clientX - dragState.current.x) / rect.width) * width / camera.zoom
     const dy = ((event.clientY - dragState.current.y) / rect.height) * height / camera.zoom
 
-    dragState.current = { x: event.clientX, y: event.clientY }
+    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) dragState.current.moved = true
+    dragState.current = { x: event.clientX, y: event.clientY, moved: dragState.current.moved }
     setCamera((current) => ({
       ...current,
       panX: current.panX - dx,
@@ -76,6 +107,7 @@ export function DielinePreview({
 
   const handlePointerUp = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (!dragState.current) return
+    lastWasDrag.current = dragState.current.moved
     dragState.current = null
     event.currentTarget.releasePointerCapture(event.pointerId)
   }
@@ -126,14 +158,38 @@ export function DielinePreview({
 
           <g transform={transform}>
             {panelRects.map((panel) => (
-              <path
-                d={pathToSvgD(panel.path)}
-                fill="rgba(255,255,255,0.92)"
-                key={`panel-fill-${panel.panelId}`}
-                stroke="rgba(217,119,6,0.08)"
-                strokeWidth="0.8"
-                vectorEffect="non-scaling-stroke"
-              />
+              <g key={`panel-group-${panel.panelId}`}>
+                <path
+                  d={pathToSvgD(panel.path)}
+                  fill={hoveredPanelId === panel.panelId ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.92)'}
+                  onClick={() => {
+                    if (lastWasDrag.current) return
+                    onPanelClick?.(panel.panelId)
+                  }}
+                  onPointerEnter={() => setHoveredPanelId(panel.panelId)}
+                  onPointerLeave={() => setHoveredPanelId((current) => current === panel.panelId ? null : current)}
+                  stroke={hoveredPanelId === panel.panelId ? 'rgba(59,130,246,0.4)' : 'rgba(217,119,6,0.08)'}
+                  strokeWidth="0.8"
+                  style={{ cursor: 'pointer' }}
+                  vectorEffect="non-scaling-stroke"
+                />
+                {hoveredPanelId === panel.panelId && panel.name ? (
+                  <text
+                    x={(panel.minX + panel.maxX) / 2}
+                    y={(panel.minY + panel.maxY) / 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#1e40af"
+                    fontSize={Math.max(8, Math.min(14, (panel.maxX - panel.minX) * 0.12))}
+                    fontFamily="system-ui, sans-serif"
+                    fontWeight="600"
+                    pointerEvents="none"
+                    style={{ userSelect: 'none' }}
+                  >
+                    {panel.name}
+                  </text>
+                ) : null}
+              </g>
             ))}
 
             {contentLayouts.map((layout) => {
@@ -161,11 +217,11 @@ export function DielinePreview({
                 d={pathToSvgD(linework.path)}
                 fill="none"
                 key={`${linework.role}-${index}`}
-                stroke={linework.role === 'cut' ? '#c96c10' : linework.role === 'score' ? '#2563eb' : '#64748b'}
+                stroke={lineworkStroke(linework.role)}
                 strokeDasharray={linework.stroke_style === 'dashed' ? '8 7' : linework.stroke_style === 'dotted' ? '1.4 5' : undefined}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={linework.role === 'cut' ? 1.85 : 1.25}
+                strokeWidth={lineworkStrokeWidth(linework.role)}
                 vectorEffect="non-scaling-stroke"
               />
             ))}

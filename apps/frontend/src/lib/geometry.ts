@@ -44,10 +44,10 @@ export function pathToSvgD(path: Path2D) {
     } else if (seg.kind === 'Bezier') {
       commands.push(`C ${seg.p1.x} ${seg.p1.y} ${seg.p2.x} ${seg.p2.y} ${seg.p3.x} ${seg.p3.y}`)
     } else {
-      const end = lineEnd(seg)
-      const largeArcFlag = Math.abs(seg.endAngle - seg.startAngle) > Math.PI ? 1 : 0
-      const sweepFlag = seg.clockwise ? 1 : 0
-      commands.push(`A ${seg.radius} ${seg.radius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`)
+      const points = sampleArcSegment(seg, 24)
+      for (const point of points) {
+        commands.push(`L ${point.x} ${point.y}`)
+      }
     }
   }
 
@@ -91,19 +91,35 @@ export function samplePath(path: Path2D, arcSegments = 24, omitSegmentIndex?: nu
       )
       points.push(...curve.getPoints(arcSegments))
     } else {
-      const curve = new EllipseCurve(
-        seg.center.x,
-        seg.center.y,
-        seg.radius,
-        seg.radius,
-        seg.startAngle,
-        seg.endAngle,
-        !seg.clockwise,
-      )
-      points.push(...curve.getPoints(arcSegments))
+      points.push(...sampleArcSegment(seg, arcSegments, points.length > 0))
     }
   }
   return points
+}
+
+function sampleArcSegment(seg: Extract<PathSeg, { kind: 'Arc' }>, segments: number, skipFirstPoint = true) {
+  const fullTurn = Math.PI * 2
+  const sweep = seg.clockwise
+    ? -mod(seg.startAngle - seg.endAngle, fullTurn)
+    : mod(seg.endAngle - seg.startAngle, fullTurn)
+
+  const points: Vector2[] = []
+  for (let step = 0; step <= segments; step += 1) {
+    if (skipFirstPoint && step === 0) continue
+    const t = step / segments
+    const angle = seg.startAngle + sweep * t
+    points.push(
+      new Vector2(
+        seg.center.x + seg.radius * Math.cos(angle),
+        seg.center.y + seg.radius * Math.sin(angle),
+      ),
+    )
+  }
+  return points
+}
+
+function mod(value: number, divisor: number) {
+  return ((value % divisor) + divisor) % divisor
 }
 
 export function pathToShape(path: Path2D) {

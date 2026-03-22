@@ -6,11 +6,24 @@ export interface NumericParamDef {
   max_value: number | null
 }
 
+export interface SelectParamOptionDef {
+  value: string
+  label: string
+}
+
+export interface SelectParamDef {
+  key: string
+  label: string
+  default_value: string
+  options: SelectParamOptionDef[]
+}
+
 export interface TemplateDescriptor {
   key: string
   label: string
   package_kind: string
   numeric_params: NumericParamDef[]
+  select_params: SelectParamDef[]
 }
 
 export interface TemplatesResponse {
@@ -45,12 +58,22 @@ export interface Path2D {
 }
 
 export interface StyledPath2D {
-  role: 'cut' | 'score' | 'guide'
+  role: 'cut' | 'bleed' | 'safe' | 'fold' | 'score' | 'guide'
   stroke_style: 'solid' | 'dashed' | 'dotted'
   path: Path2D
 }
 
+export interface Drawing2DPanel {
+  panel_id: number
+  name: string
+  boundary: Path2D
+  content_region: Path2D
+  surface_frame: SurfaceFrame2D
+  accepts_content: boolean
+}
+
 export interface Drawing2DResult {
+  panels: Drawing2DPanel[]
   linework: StyledPath2D[]
   contents: OutputContentPlacement[]
 }
@@ -118,4 +141,9 @@ export interface GeneratedPackage {
 export interface NumericParamValue {
   key: string
   value: number
+}
+
+export interface SelectParamValue {
+  key: string
+  value: string
 }

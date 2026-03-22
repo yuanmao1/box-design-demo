@@ -13,12 +13,16 @@ import { DielinePreview } from '@/features/dieline-preview'
 import { createContent, describeWasmError, mergeContentPatch } from '@/lib/package-editor'
 import { generatePackage, listTemplates } from '@/lib/wasm'
 import { cn } from '@/lib/utils'
-import type { GeneratedPackage, NumericParamDef, NumericParamValue, OutputContent, OutputContentPlacement, TemplateDescriptor } from '@/types/api'
+import type { GeneratedPackage, NumericParamDef, NumericParamValue, OutputContent, OutputContentPlacement, SelectParamDef, SelectParamValue, TemplateDescriptor } from '@/types/api'
 
 const Preview3DCanvas = lazy(() => import('@/features/preview-3d-canvas').then((module) => ({ default: module.Preview3DCanvas })))
 
 function numericParamsFromDescriptor(template: TemplateDescriptor) {
-  return Object.fromEntries(template.numeric_params.map((param) => [param.key, param.default_value]))
+  return Object.fromEntries((template.numeric_params ?? []).map((param) => [param.key, param.default_value]))
+}
+
+function selectParamsFromDescriptor(template: TemplateDescriptor) {
+  return Object.fromEntries((template.select_params ?? []).map((param) => [param.key, param.default_value]))
 }
 
 function paramStep(param: NumericParamDef) {
@@ -29,22 +33,31 @@ function formatParamValue(param: NumericParamDef, value: number) {
   return param.key.includes('angle') ? `${value.toFixed(2)} rad` : `${value.toFixed(0)} mm`
 }
 
+function formatSelectValue(param: SelectParamDef, value: string) {
+  return param.options.find((option) => option.value === value)?.label ?? value
+}
+
 function App() {
   const [templates, setTemplates] = useState<TemplateDescriptor[]>([])
   const [selectedKey, setSelectedKey] = useState('')
-  const [params, setParams] = useState<Record<string, number>>({})
+  const [numericParams, setNumericParams] = useState<Record<string, number>>({})
+  const [selectParams, setSelectParams] = useState<Record<string, string>>({})
   const [generated, setGenerated] = useState<GeneratedPackage | null>(null)
   const [contents, setContents] = useState<OutputContentPlacement[]>([])
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null)
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [loadingPackage, setLoadingPackage] = useState(false)
+  const [focusPanelId, setFocusPanelId] = useState<{ panelId: number; seq: number } | null>(null)
+  const [activePanelId, setActivePanelId] = useState<number | null>(null)
+  const focusSeqRef = useRef(0)
   const [error, setError] = useState<string | null>(null)
   const hydratedRef = useRef(false)
   const latestGenerateId = useRef(0)
 
   const selectedTemplate = templates.find((template) => template.key === selectedKey) ?? null
   const deferredKey = useDeferredValue(selectedKey)
-  const deferredParams = useDeferredValue(params)
+  const deferredNumericParams = useDeferredValue(numericParams)
+  const deferredSelectParams = useDeferredValue(selectParams)
 
   useEffect(() => {
     let cancelled = false
@@ -59,7 +72,8 @@ function App() {
           const firstTemplate = response.templates[0]
           if (firstTemplate) {
             setSelectedKey(firstTemplate.key)
-            setParams(numericParamsFromDescriptor(firstTemplate))
+            setNumericParams(numericParamsFromDescriptor(firstTemplate))
+            setSelectParams(selectParamsFromDescriptor(firstTemplate))
           }
           setLoadingTemplates(false)
         })
@@ -86,8 +100,9 @@ function App() {
 
     void (async () => {
       try {
-        const payload: NumericParamValue[] = Object.entries(deferredParams).map(([key, value]) => ({ key, value }))
-        const nextGenerated = await generatePackage(deferredKey, payload, contents)
+        const numericPayload: NumericParamValue[] = Object.entries(deferredNumericParams).map(([key, value]) => ({ key, value }))
+        const selectPayload: SelectParamValue[] = Object.entries(deferredSelectParams).map(([key, value]) => ({ key, value }))
+        const nextGenerated = await generatePackage(deferredKey, numericPayload, selectPayload, contents)
         if (requestId !== latestGenerateId.current) return
 
         startTransition(() => {
@@ -101,19 +116,24 @@ function App() {
         setLoadingPackage(false)
       }
     })()
-  }, [contents, deferredKey, deferredParams, selectedTemplate])
+  }, [contents, deferredKey, deferredNumericParams, deferredSelectParams, selectedTemplate])
 
   const changeTemplate = (key: string) => {
     const nextTemplate = templates.find((template) => template.key === key)
     if (!nextTemplate) return
     setSelectedKey(key)
-    setParams(numericParamsFromDescriptor(nextTemplate))
+    setNumericParams(numericParamsFromDescriptor(nextTemplate))
+    setSelectParams(selectParamsFromDescriptor(nextTemplate))
     setContents([])
     setSelectedContentId(null)
   }
 
   const updateParam = (key: string, value: number) => {
-    setParams((current) => ({ ...current, [key]: value }))
+    setNumericParams((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateSelectParam = (key: string, value: string) => {
+    setSelectParams((current) => ({ ...current, [key]: value }))
   }
 
   const panelOptions = useMemo(() => {
@@ -127,7 +147,7 @@ function App() {
   const errorDescription = describeWasmError(error)
 
   const addContent = (type: OutputContent['type']) => {
-    const panelId = panelOptions[0]?.value ?? 0
+    const panelId = activePanelId ?? panelOptions[0]?.value ?? 0
     const next = createContent(type, panelId)
     setContents((current) => [...current, next])
     setSelectedContentId(next.id)
@@ -184,8 +204,8 @@ function App() {
                 <Separator />
 
                 <div className="space-y-5">
-                  {selectedTemplate?.numeric_params.map((param) => {
-                    const value = params[param.key] ?? param.default_value
+                  {(selectedTemplate?.numeric_params ?? []).map((param) => {
+                    const value = numericParams[param.key] ?? param.default_value
                     return (
                       <div key={param.key} className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
@@ -213,13 +233,40 @@ function App() {
                       </div>
                     )
                   })}
+                  {(selectedTemplate?.select_params ?? []).map((param) => {
+                    const value = selectParams[param.key] ?? param.default_value
+                    return (
+                      <div key={param.key} className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <Label>{param.label}</Label>
+                            <p className="text-xs text-muted-foreground">{param.key}</p>
+                          </div>
+                          <Badge variant="outline">{formatSelectValue(param, value)}</Badge>
+                        </div>
+                        <Select onValueChange={(nextValue) => updateSelectParam(param.key, nextValue)} value={value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={`Select ${param.label}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {param.options.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )
+                  })}
                 </div>
 
                 <Button
                   className="w-full"
                   onClick={() => {
                     if (!selectedTemplate) return
-                    setParams(numericParamsFromDescriptor(selectedTemplate))
+                    setNumericParams(numericParamsFromDescriptor(selectedTemplate))
+                    setSelectParams(selectParamsFromDescriptor(selectedTemplate))
                   }}
                   variant="secondary"
                 >
@@ -257,7 +304,9 @@ function App() {
                   {JSON.stringify(
                     {
                       selected_template: selectedKey,
-                      numeric_params: params,
+                      numeric_params: numericParams,
+                      select_params: selectParams,
+                      active_panel_id: activePanelId,
                       selected_content: selectedContent,
                     },
                     null,
@@ -270,12 +319,15 @@ function App() {
 
           <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
             <PreviewPanel description="按 `Drawing2DResult` 直接渲染刀线和内容，并支持拖拽查看。" loading={loadingPackage} title="2D Dieline">
-              <DielinePreview result={generated?.drawing_2d ?? null} />
+              <DielinePreview result={generated?.drawing_2d ?? null} onPanelClick={(panelId) => {
+                setFocusPanelId({ panelId, seq: ++focusSeqRef.current })
+                setActivePanelId(panelId)
+              }} />
             </PreviewPanel>
 
             <PreviewPanel description="按 `Fold` 图生成的层级节点和局部折叠 transform，3D 部分按需懒加载。" loading={loadingPackage} title="3D Preview">
               <Suspense fallback={<EmptyState label="Loading 3D renderer chunk..." />}>
-                <Preview3DCanvas result={generated?.preview_3d ?? null} />
+                <Preview3DCanvas result={generated?.preview_3d ?? null} focusPanelId={focusPanelId} />
               </Suspense>
             </PreviewPanel>
           </div>

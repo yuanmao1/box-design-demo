@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 const package = @import("package.zig");
-const templates = @import("templates/mod.zig");
+const templates = @import("mod.zig");
 const types = @import("types.zig");
 
 const allocator = if (builtin.target.cpu.arch.isWasm())
@@ -12,6 +12,7 @@ else
 const GenerateInput = struct {
     key: []const u8,
     numeric_params: []const templates.schema.NumericParamValue = &.{},
+    select_params: []const templates.schema.SelectParamValue = &.{},
     contents: []const InputContent = &.{},
 };
 
@@ -131,6 +132,30 @@ fn serializeTemplates() ![]u8 {
             try writer.endObject();
         }
         try writer.endArray();
+        try writer.objectField("select_params");
+        try writer.beginArray();
+        for (descriptor.select_params) |param| {
+            try writer.beginObject();
+            try writer.objectField("key");
+            try writer.write(param.key);
+            try writer.objectField("label");
+            try writer.write(param.label);
+            try writer.objectField("default_value");
+            try writer.write(param.default_value);
+            try writer.objectField("options");
+            try writer.beginArray();
+            for (param.options) |option| {
+                try writer.beginObject();
+                try writer.objectField("value");
+                try writer.write(option.value);
+                try writer.objectField("label");
+                try writer.write(option.label);
+                try writer.endObject();
+            }
+            try writer.endArray();
+            try writer.endObject();
+        }
+        try writer.endArray();
         try writer.endObject();
     }
     try writer.endArray();
@@ -145,7 +170,12 @@ fn generatePackage(input_json: []const u8) ![]u8 {
     });
     defer parsed.deinit();
 
-    const instance = try templates.createTemplate(allocator, parsed.value.key, parsed.value.numeric_params);
+    const instance = try templates.createTemplate(
+        allocator,
+        parsed.value.key,
+        parsed.value.numeric_params,
+        parsed.value.select_params,
+    );
     defer instance.deinit();
     const contents = try mapInputContents(allocator, parsed.value.contents);
     defer allocator.free(contents);
@@ -179,6 +209,25 @@ fn generatePackage(input_json: []const u8) ![]u8 {
 
 fn writeDrawing2D(writer: *std.json.Stringify, drawing: package.Drawing2DResult) !void {
     try writer.beginObject();
+    try writer.objectField("panels");
+    try writer.beginArray();
+    for (drawing.panels) |panel| {
+        try writer.beginObject();
+        try writer.objectField("panel_id");
+        try writer.write(panel.panel_id);
+        try writer.objectField("name");
+        try writer.write(panel.name);
+        try writer.objectField("boundary");
+        try writePath2D(writer, panel.boundary);
+        try writer.objectField("content_region");
+        try writePath2D(writer, panel.content_region);
+        try writer.objectField("surface_frame");
+        try writeSurfaceFrame2D(writer, panel.surface_frame);
+        try writer.objectField("accepts_content");
+        try writer.write(panel.accepts_content);
+        try writer.endObject();
+    }
+    try writer.endArray();
     try writer.objectField("linework");
     try writer.beginArray();
     for (drawing.linework) |linework| {

@@ -71,6 +71,7 @@ pub const Panel = struct {
     };
 
     id: PanelId,
+    name: []const u8 = "",
     boundary: Path2D,
     surface_frame: SurfaceFrame2D,
     content_region: Path2D,
@@ -170,6 +171,9 @@ pub const StrokeStyle = enum {
 
 pub const LineRole = enum {
     cut,
+    bleed,
+    safe,
+    fold,
     score,
     guide,
 };

@@ -1,5 +1,5 @@
 import { OrbitControls } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ACESFilmicToneMapping,
@@ -11,25 +11,31 @@ import {
   LinearFilter,
   Line as ThreeLine,
   LineBasicMaterial,
+  Matrix4,
   MeshBasicMaterial,
   PerspectiveCamera,
   ShapeGeometry,
   SRGBColorSpace,
+  Vector3,
 } from "three";
 import { pathToShape } from "@/lib/geometry";
 import { loadPanelTextureCanvas } from "@/lib/panel-texture";
+import { pathBounds } from "@/lib/geometry";
 import {
   applySurfaceFrameUv,
   buildPreviewSceneData,
   fallbackSurfaceFrame,
+  type PreviewSceneData,
 } from "@/lib/preview-3d";
 import { log3DDebug } from "@/lib/debug-3d";
 import type { GeneratedPackage } from "@/types/api";
 
 export function Preview3DCanvas({
   result,
+  focusPanelId,
 }: {
   result: GeneratedPackage["preview_3d"] | null;
+  focusPanelId?: { panelId: number; seq: number } | null;
 }) {
   const sceneData = useMemo(() => buildPreviewSceneData(result), [result]);
 
@@ -68,11 +74,8 @@ export function Preview3DCanvas({
         />
         <directionalLight intensity={1.4} position={[180, -140, 220]} />
         <directionalLight intensity={0.5} position={[-120, 160, 80]} />
-        <gridHelper
-          args={[600, 60, "#93a4b1", "#d6dee6"]}
-          position={[0, 0, -24]}
-        />
-        <CameraRig center={sceneData.center} radius={sceneData.radius} />
+        <SceneGrid radius={sceneData.radius} centerZ={-sceneData.center.z} />
+        <CameraRig center={sceneData.center} radius={sceneData.radius} focusPanelId={focusPanelId ?? null} sceneData={sceneData} />
         <group
           position={[
             -sceneData.center.x,
@@ -181,13 +184,24 @@ function PanelNode({
 function CameraRig({
   center,
   radius,
+  focusPanelId,
+  sceneData,
 }: {
   center: { x: number; y: number; z: number };
   radius: number;
+  focusPanelId: { panelId: number; seq: number } | null;
+  sceneData: PreviewSceneData;
 }) {
   const controlsRef = useRef<any>(null);
   const camera = useThree((state) => state.camera as PerspectiveCamera);
   const invalidate = useThree((state) => state.invalidate);
+  const animRef = useRef<{
+    startPos: Vector3;
+    endPos: Vector3;
+    startTarget: Vector3;
+    endTarget: Vector3;
+    progress: number;
+  } | null>(null);
 
   useEffect(() => {
     const fitRadius = Math.max(radius, 8);
@@ -211,6 +225,140 @@ function CameraRig({
     invalidate();
   }, [camera, center.x, center.y, center.z, invalidate, radius]);
 
+  // Keyboard pan: WASD / arrow keys
+  const keysPressed = useRef(new Set<string>());
+  const canvasEl = useThree((s) => s.gl.domElement);
+
+  useEffect(() => {
+    const parent = canvasEl.parentElement;
+    if (!parent) return;
+    // Make the container focusable so it can receive key events
+    if (!parent.hasAttribute("tabindex")) parent.setAttribute("tabindex", "0");
+    parent.style.outline = "none";
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        e.preventDefault();
+        keysPressed.current.add(key);
+        invalidate();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      keysPressed.current.delete(e.key.toLowerCase());
+    };
+    parent.addEventListener("keydown", onKeyDown);
+    parent.addEventListener("keyup", onKeyUp);
+    // Focus on pointer enter so keys work without extra clicking
+    const onEnter = () => parent.focus();
+    parent.addEventListener("pointerenter", onEnter);
+    return () => {
+      parent.removeEventListener("keydown", onKeyDown);
+      parent.removeEventListener("keyup", onKeyUp);
+      parent.removeEventListener("pointerenter", onEnter);
+    };
+  }, [canvasEl, invalidate]);
+
+  useEffect(() => {
+    if (focusPanelId == null) return;
+    const targetNode = sceneData.nodes.find(
+      (n) => n.node.panel_id === focusPanelId.panelId,
+    );
+    if (!targetNode?.node.boundary) return;
+
+    const bounds = pathBounds(targetNode.node.boundary);
+    const localCenter = new Vector3(
+      (bounds.minX + bounds.maxX) / 2,
+      (bounds.minY + bounds.maxY) / 2,
+      0,
+    );
+    const panelWorldCenter = localCenter.applyMatrix4(targetNode.worldMatrix);
+
+    // Apply scene centering offset (matches the group position={[-center.x, ...]}）
+    const centeredTarget = new Vector3(
+      panelWorldCenter.x - sceneData.center.x,
+      panelWorldCenter.y - sceneData.center.y,
+      panelWorldCenter.z - sceneData.center.z,
+    );
+
+    // Get world-space normal from outside_normal
+    let normal: Vector3;
+    if (targetNode.node.outside_normal) {
+      const n = targetNode.node.outside_normal;
+      normal = new Vector3(n.x, n.y, n.z);
+      const rotMatrix = new Matrix4().extractRotation(targetNode.worldMatrix);
+      normal.applyMatrix4(rotMatrix).normalize();
+    } else {
+      normal = new Vector3(0, 0, 1);
+    }
+
+    const dist = Math.max(radius, 8) * 2.2;
+    const endPos = centeredTarget.clone().add(normal.clone().multiplyScalar(dist));
+
+    animRef.current = {
+      startPos: camera.position.clone(),
+      endPos,
+      startTarget: controlsRef.current
+        ? controlsRef.current.target.clone()
+        : new Vector3(center.x, center.y, center.z),
+      endTarget: centeredTarget,
+      progress: 0,
+    };
+    invalidate();
+  }, [focusPanelId, camera, center, invalidate, radius, sceneData]);
+
+  useFrame((_, delta) => {
+    let needsUpdate = false;
+
+    // Focus-panel animation
+    const anim = animRef.current;
+    if (anim) {
+      anim.progress = Math.min(1, anim.progress + delta * 2.5);
+      const t = easeInOutCubic(anim.progress);
+
+      camera.position.lerpVectors(anim.startPos, anim.endPos, t);
+
+      if (controlsRef.current) {
+        controlsRef.current.target.lerpVectors(
+          anim.startTarget,
+          anim.endTarget,
+          t,
+        );
+      }
+
+      if (anim.progress >= 1) animRef.current = null;
+      needsUpdate = true;
+    }
+
+    // Keyboard pan
+    const keys = keysPressed.current;
+    if (keys.size > 0) {
+      const speed = Math.max(radius, 8) * 0.8 * delta;
+      // Pan relative to camera's local axes (right = x, up = y)
+      const right = new Vector3();
+      const up = new Vector3();
+      camera.getWorldDirection(new Vector3()); // ensure matrix is fresh
+      right.setFromMatrixColumn(camera.matrix, 0); // camera-right
+      up.setFromMatrixColumn(camera.matrix, 1);    // camera-up
+
+      const panOffset = new Vector3();
+      if (keys.has("a") || keys.has("arrowleft")) panOffset.addScaledVector(right, -speed);
+      if (keys.has("d") || keys.has("arrowright")) panOffset.addScaledVector(right, speed);
+      if (keys.has("w") || keys.has("arrowup")) panOffset.addScaledVector(up, speed);
+      if (keys.has("s") || keys.has("arrowdown")) panOffset.addScaledVector(up, -speed);
+
+      camera.position.add(panOffset);
+      if (controlsRef.current) controlsRef.current.target.add(panOffset);
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      if (controlsRef.current) controlsRef.current.update();
+      camera.updateProjectionMatrix();
+      invalidate();
+    }
+  });
+
   return (
     <OrbitControls
       ref={controlsRef}
@@ -224,6 +372,21 @@ function CameraRig({
       minDistance={Math.max(radius * 0.5, 6)}
     />
   );
+}
+
+function SceneGrid({ radius, centerZ }: { radius: number; centerZ: number }) {
+  const gridSize = Math.max(radius * 4, 200);
+  const gridDivisions = Math.round(gridSize / 10);
+  return (
+    <gridHelper
+      args={[gridSize, gridDivisions, "#93a4b1", "#d6dee6"]}
+      position={[0, 0, centerZ]}
+    />
+  );
+}
+
+function easeInOutCubic(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
 
 function usePanelTexture(

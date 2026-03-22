@@ -31,6 +31,9 @@
 
 - [simple_two_panel.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/simple_two_panel.zig)
 - [mailer_box.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/mailer_box.zig)
+- [imported_two_panel.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/imported_two_panel.zig)
+
+补充说明文档放在 [docs/README.md](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/docs/README.md)。
 
 建议每个模板都定义本地 `PanelKey` 枚举，并通过一个小的 `panelId(...)` helper 转成 `types.PanelId`。这样 fold、content、测试都可以按结构语义引用 panel，而不是直接写裸数字。
 
@@ -57,6 +60,34 @@
 - `roundedFlapSegments(...)`
 - `initPanelBySegments(...)`
 
+如果你拿到的是大模型识别后的“线段 + panel + fold”结构化结果，优先考虑“JSON authoring + spec consumption”这条链路：
+
+- AI 先产出 [*.json](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/data/json/imported_two_panel.json)
+- 再用 [template_json_to_spec.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/tools/template_json_to_spec.zig) 生成 Zig spec
+- 最后由 [compiled_spec.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/compiled_spec.zig) 消费生成后的 spec
+
+- 通过 JSON 中间层稳定承接 AI 输出
+- 支持 `line` / `arc` / `bezier`
+- 支持相对坐标归一化到目标尺寸
+- 支持“固定 JSON 拓扑 + 少量运行时参数替换”
+- 把 spec 转成 `descriptor`
+- 把 spec 转成 `Panel` / `Fold` / `StyledPath2D`
+- 生成可注册的 `Instance` / `create(...)`
+
+推荐工作方式不是要求 AI 一次完成全部模板，而是：
+
+- AI 先识别大体 panel / fold / linework
+- 人工在 JSON 中修正 panel 划分、曲线控制点、fold 索引
+- 人工补充 `numeric_params` 和 `normalization`
+- 本地生成 spec 并跑测试
+
+推荐目录约定：
+
+- `data/json/`: AI 或人工维护的中间描述源文件
+- `data/spec/`: 生成后的 Zig spec
+
+这样 source 和 generated artifact 不会混在一起。
+
 ## 推荐开发步骤
 
 1. 先确定业务参数
@@ -65,7 +96,7 @@
 4. 定义 fold 轴和 fold direction
 5. 生成 linework
 6. 构造 `FoldingCartonModel`
-7. 注册到 [mod.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/templates/mod.zig)
+7. 注册到 [mod.zig](/home/xuyuanmao/workspace/box-design-demo/packages/geo-core/src/mod.zig)
 8. 补测试
 
 如果模板里出现大量重复的：
@@ -178,8 +209,29 @@
 规则：
 
 - cut line 用 `.role = .cut`
-- score line 用 `.role = .score`
+- bleed line 用 `.role = .bleed`
+- safe line 用 `.role = .safe`
+- fold line 用 `.role = .fold`
+- `score` 仅保留为旧数据兼容别名，新模板优先用 `fold`
 - 不要让前端靠 linework 反推 fold 关系
+
+当前前端约定的显示语义：
+
+- 切刀线：实线，蓝色
+- 出血线：实线，红色
+- 安全线：虚线，灰色
+- 折叠线：虚线，蓝色
+
+### 4. 坐标与物理长度
+
+`geo-core` 里的几何坐标默认就是物理长度坐标，当前按毫米使用。
+
+规则：
+
+- 模板几何里的 `x/y/width/height/length/depth/radius` 默认都按 mm 解释
+- 2D dieline 和 3D preview 共用同一套几何数值，没有额外的“渲染缩放单位”
+- `panel_uv_percent` 只用于内容放置时的相对百分比；一旦投影回 panel surface，仍然落回 mm 坐标
+- 如果后续要接入其它单位，应该在导入层做显式换算，不要在模板内部混用
 
 ## 如何判断一个模板还能不能继续用 FoldingCartonModel
 

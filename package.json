@@ -9,6 +9,7 @@
   "scripts": {
     "build:wasm": "cd packages/geo-core && zig build -Doptimize=ReleaseSmall && cp zig-out/bin/geo-core.wasm ../../apps/frontend/public/geo-core.wasm",
     "test:geo-core": "cd packages/geo-core && zig build test",
+    "gen:geo-template-spec": "zig run packages/geo-core/tools/template_json_to_spec.zig --",
     "dev:frontend": "bun run --filter './apps/frontend' dev",
     "dev:backend": "bun run --filter './apps/backend' dev",
     "build:frontend": "bun run --filter './apps/frontend' build",

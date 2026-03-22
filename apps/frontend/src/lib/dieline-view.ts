@@ -14,13 +14,18 @@ export interface DielineContentLayout {
 }
 
 export function computeDielineBounds(result: Drawing2DResult | null) {
-  if (!result || result.linework.length === 0) {
+  if (!result) {
     return { minX: 0, minY: 0, maxX: 100, maxY: 100 }
   }
 
-  return result.linework.reduce(
-    (acc, linework) => {
-      const next = pathBounds(linework.path)
+  const paths = [...result.panels.map((panel) => panel.boundary), ...result.linework.map((linework) => linework.path)]
+  if (paths.length === 0) {
+    return { minX: 0, minY: 0, maxX: 100, maxY: 100 }
+  }
+
+  return paths.reduce(
+    (acc, path) => {
+      const next = pathBounds(path)
       return {
         minX: Math.min(acc.minX, next.minX),
         minY: Math.min(acc.minY, next.minY),
@@ -28,16 +33,22 @@ export function computeDielineBounds(result: Drawing2DResult | null) {
         maxY: Math.max(acc.maxY, next.maxY),
       }
     },
-    pathBounds(result.linework[0].path),
+    pathBounds(paths[0]),
   )
 }
 
 export function computePanelRects(result: Drawing2DResult | null) {
   if (!result) return []
 
-  return result.linework
-    .filter((linework) => linework.role === 'cut' && linework.path.closed)
-    .map((linework, index) => ({ panelId: index, path: linework.path, ...pathBounds(linework.path) }))
+  return result.panels.map((panel) => ({
+    panelId: panel.panel_id,
+    name: panel.name,
+    path: panel.boundary,
+    contentPath: panel.content_region,
+    surfaceFrame: panel.surface_frame,
+    acceptsContent: panel.accepts_content,
+    ...pathBounds(panel.boundary),
+  }))
 }
 
 export function computeContentLayouts(result: Drawing2DResult | null, clipIdPrefix: string): DielineContentLayout[] {
@@ -45,13 +56,14 @@ export function computeContentLayouts(result: Drawing2DResult | null, clipIdPref
 
   const panelRects = computePanelRects(result)
   return result.contents.flatMap((content) => {
-    const anchorPath = content.clip_path ?? panelRects.find((panel) => panel.panelId === content.panel_id)?.path
+    const panel = panelRects.find((candidate) => candidate.panelId === content.panel_id)
+    const anchorPath = content.clip_path ?? panel?.contentPath ?? panel?.path
     if (!anchorPath) return []
 
     const anchorBounds = pathBounds(anchorPath)
     const frame =
       content.surface_frame ??
-      {
+      panel?.surfaceFrame ?? {
         origin: { x: anchorBounds.minX, y: anchorBounds.minY },
         u_axis: { x: anchorBounds.maxX - anchorBounds.minX, y: 0 },
         v_axis: { x: 0, y: anchorBounds.maxY - anchorBounds.minY },

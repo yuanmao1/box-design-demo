@@ -34,6 +34,17 @@ pub fn resolveNumericParam(
     return default_value;
 }
 
+pub fn resolveSelectParam(
+    select_params: []const schema.SelectParamValue,
+    key: []const u8,
+    default_value: []const u8,
+) []const u8 {
+    for (select_params) |param| {
+        if (std.mem.eql(u8, param.key, key)) return param.value;
+    }
+    return default_value;
+}
+
 pub fn rectSegments(x: f64, y: f64, width: f64, height: f64) [4]types.PathSeg {
     return .{
         .{ .Line = .{ .from = .{ .x = x, .y = y }, .to = .{ .x = x + width, .y = y } } },
@@ -62,12 +73,32 @@ pub fn cutPath(comptime N: usize, segments: *const [N]types.PathSeg) types.Style
     };
 }
 
-pub fn scorePath(comptime N: usize, segments: *const [N]types.PathSeg) types.StyledPath2D {
+pub fn bleedPath(comptime N: usize, segments: *const [N]types.PathSeg) types.StyledPath2D {
     return .{
-        .path = openPath(N, segments),
-        .role = .score,
+        .path = closedPath(N, segments),
+        .role = .bleed,
+        .stroke_style = .solid,
+    };
+}
+
+pub fn safePath(comptime N: usize, segments: *const [N]types.PathSeg) types.StyledPath2D {
+    return .{
+        .path = closedPath(N, segments),
+        .role = .safe,
         .stroke_style = .dashed,
     };
+}
+
+pub fn foldPath(comptime N: usize, segments: *const [N]types.PathSeg) types.StyledPath2D {
+    return .{
+        .path = openPath(N, segments),
+        .role = .fold,
+        .stroke_style = .dashed,
+    };
+}
+
+pub fn scorePath(comptime N: usize, segments: *const [N]types.PathSeg) types.StyledPath2D {
+    return foldPath(N, segments);
 }
 
 pub fn lineSegment(from: types.Vec2, to: types.Vec2) types.PathSeg {
@@ -357,8 +388,8 @@ pub fn appendCutLinework(
     start_index: usize,
     panel_segments: *const [N][4]types.PathSeg,
 ) void {
-    for (panel_segments.*, 0..) |segments, index| {
-        destination[start_index + index] = cutPath(4, &segments);
+    for (0..N) |index| {
+        destination[start_index + index] = cutPath(4, &panel_segments[index]);
     }
 }
 
@@ -368,8 +399,8 @@ pub fn appendScoreLinework(
     start_index: usize,
     score_segments: *const [N][1]types.PathSeg,
 ) void {
-    for (score_segments.*, 0..) |segments, index| {
-        destination[start_index + index] = scorePath(1, &segments);
+    for (0..N) |index| {
+        destination[start_index + index] = foldPath(1, &score_segments[index]);
     }
 }
 
@@ -380,9 +411,9 @@ test "wrench helpers build fold and styled paths" {
     try std.testing.expectEqual(types.LineRole.cut, cut.role);
 
     const score_segments = scoreLine(.{ .x = 5, .y = 0 }, .{ .x = 5, .y = 5 });
-    const score = scorePath(1, &score_segments);
-    try std.testing.expect(!score.path.closed);
-    try std.testing.expectEqual(types.LineRole.score, score.role);
+    const fold_line = foldPath(1, &score_segments);
+    try std.testing.expect(!fold_line.path.closed);
+    try std.testing.expectEqual(types.LineRole.fold, fold_line.role);
 
     const hinge = fold(1, 2, 0, 2, std.math.pi / 2.0, .toward_inside);
     try std.testing.expectEqual(@as(types.PanelId, 1), hinge.from_panel_id);
@@ -409,7 +440,9 @@ test "wrench helpers build strips chains and linework" {
     appendCutLinework(3, &linework, 0, &panel_segments);
     appendScoreLinework(2, &linework, 3, &scores);
     try std.testing.expectEqual(types.LineRole.cut, linework[0].role);
-    try std.testing.expectEqual(types.LineRole.score, linework[4].role);
+    try std.testing.expectEqual(types.LineRole.fold, linework[4].role);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), linework[0].path.segments[0].Line.from.x, 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), linework[3].path.segments[0].Line.from.x, 1e-9);
 }
 
 test "wrench helpers initialize panel and score specs" {

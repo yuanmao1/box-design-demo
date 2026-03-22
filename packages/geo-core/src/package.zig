@@ -37,12 +37,24 @@ pub const ContentValidationError = error{
 };
 
 pub const Drawing2DResult = struct {
+    pub const Panel2D = struct {
+        panel_id: types.PanelId,
+        name: []const u8 = "",
+        boundary: types.Path2D,
+        content_region: types.Path2D,
+        surface_frame: types.SurfaceFrame2D,
+        accepts_content: bool,
+    };
+
+    panels: []const Panel2D = &.{},
     linework: []const types.StyledPath2D,
     contents: []const types.PanelContentPlacement = &.{},
 
     pub fn deinit(self: *Drawing2DResult, allocator: std.mem.Allocator) void {
+        allocator.free(self.panels);
         allocator.free(self.linework);
         self.* = .{
+            .panels = &.{},
             .linework = &.{},
         };
     }
@@ -105,11 +117,28 @@ pub const FoldingCartonModel = struct {
         self: *const FoldingCartonModel,
         allocator: std.mem.Allocator,
     ) !Drawing2DResult {
+        const panels = try allocator.alloc(Drawing2DResult.Panel2D, self.panels.len);
+        errdefer allocator.free(panels);
+        for (self.panels, 0..) |panel, index| {
+            panels[index] = .{
+                .panel_id = panel.id,
+                .name = panel.name,
+                .boundary = panel.boundary,
+                .content_region = panel.content_region,
+                .surface_frame = panel.surface_frame,
+                .accepts_content = panel.accepts_content,
+            };
+        }
+
         const linework = try allocator.alloc(types.StyledPath2D, self.linework.len);
-        errdefer allocator.free(linework);
+        errdefer {
+            allocator.free(linework);
+            allocator.free(panels);
+        }
         std.mem.copyForwards(types.StyledPath2D, linework, self.linework);
 
         return .{
+            .panels = panels,
             .linework = linework,
             .contents = self.contents,
         };
@@ -141,10 +170,13 @@ pub const FoldingCartonModel = struct {
 
         var head: usize = 0;
         var tail: usize = 0;
+        var visited_count: usize = 0;
 
-        for (self.panels, 0..) |_, root_index| {
+        while (visited_count < self.panels.len) {
+            const root_index = self.choosePreviewRootIndex(visited);
             if (visited[root_index]) continue;
             visited[root_index] = true;
+            visited_count += 1;
             queue[tail] = root_index;
             tail += 1;
 
@@ -159,6 +191,7 @@ pub const FoldingCartonModel = struct {
                     if (visited[child_index]) continue;
 
                     visited[child_index] = true;
+                    visited_count += 1;
                     nodes[child_index].parent_index = @intCast(current_index);
                     nodes[child_index].hinge_segment_index = relation.child_edge.segment_index;
                     nodes[child_index].transform = try self.transformForFold(
@@ -250,6 +283,50 @@ pub const FoldingCartonModel = struct {
             };
         }
         return null;
+    }
+
+    fn choosePreviewRootIndex(
+        self: *const FoldingCartonModel,
+        visited: []const bool,
+    ) usize {
+        var best_index: ?usize = null;
+        var best_accepts_content = false;
+        var best_fold_degree: usize = 0;
+        var best_area: f64 = 0;
+
+        for (self.panels, 0..) |panel, index| {
+            if (visited[index]) continue;
+
+            const accepts_content = panel.accepts_content;
+            const fold_degree = self.foldDegree(panel.id);
+            const area = panelFrameArea(panel);
+
+            if (best_index == null or
+                (accepts_content and !best_accepts_content) or
+                (accepts_content == best_accepts_content and fold_degree > best_fold_degree) or
+                (accepts_content == best_accepts_content and fold_degree == best_fold_degree and area > best_area))
+            {
+                best_index = index;
+                best_accepts_content = accepts_content;
+                best_fold_degree = fold_degree;
+                best_area = area;
+            }
+        }
+
+        return best_index orelse 0;
+    }
+
+    fn foldDegree(
+        self: *const FoldingCartonModel,
+        panel_id: types.PanelId,
+    ) usize {
+        var degree: usize = 0;
+        for (self.folds) |fold| {
+            if (fold.from_panel_id == panel_id or fold.to_panel_id == panel_id) {
+                degree += 1;
+            }
+        }
+        return degree;
     }
 
     fn panelIndexById(
@@ -362,7 +439,7 @@ pub const FoldingCartonModel = struct {
             .toward_outside => 1.0,
             .toward_inside => -1.0,
         };
-        return @abs(angle_rad) * side_sign * direction_sign;
+        return angle_rad * side_sign * direction_sign;
     }
 };
 
@@ -394,12 +471,13 @@ pub const FlexiblePouchModel = struct {
         for (self.seams, 0..) |seam, index| {
             linework[self.outlines.len + index] = .{
                 .path = seam,
-                .role = .score,
+                .role = .fold,
                 .stroke_style = .dashed,
             };
         }
 
         return .{
+            .panels = &.{},
             .linework = linework,
             .contents = self.contents,
         };
@@ -618,10 +696,15 @@ fn flattenPath(
             },
             .Arc => |arc| {
                 const steps: usize = 16;
+                const full_turn = std.math.pi * 2.0;
+                const sweep = if (arc.clockwise)
+                    -@mod(arc.startAngle - arc.endAngle + full_turn, full_turn)
+                else
+                    @mod(arc.endAngle - arc.startAngle + full_turn, full_turn);
                 for (0..steps + 1) |step| {
                     if (index != 0 and step == 0) continue;
                     const t = @as(f64, @floatFromInt(step)) / @as(f64, @floatFromInt(steps));
-                    const angle = arc.startAngle + (arc.endAngle - arc.startAngle) * t;
+                    const angle = arc.startAngle + sweep * t;
                     try points.append(allocator, .{
                         .x = arc.center.x + arc.radius * std.math.cos(angle),
                         .y = arc.center.y + arc.radius * std.math.sin(angle),
@@ -756,6 +839,10 @@ fn panelCenter(panel: types.Panel) types.Vec2 {
     };
 }
 
+fn panelFrameArea(panel: types.Panel) f64 {
+    return @abs(cross(panel.surface_frame.u_axis, panel.surface_frame.v_axis));
+}
+
 fn crossVec3(a: types.Vec3, b: types.Vec3) types.Vec3 {
     return .{
         .x = a.y * b.z - a.z * b.y,
@@ -769,14 +856,15 @@ fn dotVec3(a: types.Vec3, b: types.Vec3) f64 {
 }
 
 test "template model builds drawing and preview outputs" {
-    const template = @import("templates/mod.zig").folding_carton.simple_two_panel;
+    const template = @import("mod.zig").folding_carton.simple_two_panel;
 
-    var instance = try template.create(std.testing.allocator, &.{});
+    var instance = try template.create(std.testing.allocator, &.{}, &.{});
     defer instance.deinit();
 
     var drawing = try instance.folding_carton.buildDrawing2D(std.testing.allocator);
     defer drawing.deinit(std.testing.allocator);
 
+    try std.testing.expectEqual(@as(usize, 2), drawing.panels.len);
     try std.testing.expectEqual(@as(usize, 2), drawing.linework.len);
 
     var preview = try instance.folding_carton.buildPreview3D(std.testing.allocator);
@@ -792,9 +880,9 @@ test "template model builds drawing and preview outputs" {
 }
 
 test "folding carton content validation rejects out of bounds percent placement" {
-    const template = @import("templates/mod.zig").folding_carton.simple_two_panel;
+    const template = @import("mod.zig").folding_carton.simple_two_panel;
 
-    var instance = try template.create(std.testing.allocator, &.{});
+    var instance = try template.create(std.testing.allocator, &.{}, &.{});
     defer instance.deinit();
 
     var contents = [_]types.PanelContentPlacement{
@@ -822,9 +910,9 @@ test "folding carton content validation rejects out of bounds percent placement"
 }
 
 test "folding carton content validation rejects rotated content outside panel" {
-    const template = @import("templates/mod.zig").folding_carton.simple_two_panel;
+    const template = @import("mod.zig").folding_carton.simple_two_panel;
 
-    var instance = try template.create(std.testing.allocator, &.{});
+    var instance = try template.create(std.testing.allocator, &.{}, &.{});
     defer instance.deinit();
 
     var contents = [_]types.PanelContentPlacement{
@@ -853,9 +941,9 @@ test "folding carton content validation rejects rotated content outside panel" {
 }
 
 test "folding carton content validation assigns panel clip path" {
-    const template = @import("templates/mod.zig").folding_carton.simple_two_panel;
+    const template = @import("mod.zig").folding_carton.simple_two_panel;
 
-    var instance = try template.create(std.testing.allocator, &.{});
+    var instance = try template.create(std.testing.allocator, &.{}, &.{});
     defer instance.deinit();
 
     var contents = [_]types.PanelContentPlacement{
@@ -1145,7 +1233,7 @@ test "fold sign stays stable when parent and child traversal is reversed" {
 }
 
 test "template registry exports descriptors and creates instances" {
-    const templates = @import("templates/mod.zig");
+    const templates = @import("mod.zig");
 
     const descriptors = templates.exportTemplates();
     try std.testing.expect(descriptors.len >= 1);
@@ -1161,6 +1249,7 @@ test "template registry exports descriptors and creates instances" {
             .{ .key = "panel_width", .value = 55 },
             .{ .key = "panel_height", .value = 20 },
         },
+        &.{},
     );
     defer instance.deinit();
 

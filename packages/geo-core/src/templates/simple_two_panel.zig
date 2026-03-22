@@ -83,7 +83,9 @@ pub const Instance = struct {
 pub fn create(
     allocator: std.mem.Allocator,
     numeric_params: []const schema.NumericParamValue,
+    select_params: []const schema.SelectParamValue,
 ) !*Self.Instance {
+    _ = select_params;
     const panel_width = wrench.resolveNumericParam(numeric_params, "panel_width", 40);
     const panel_height = wrench.resolveNumericParam(numeric_params, "panel_height", 30);
     const fold_angle_rad = wrench.resolveNumericParam(
@@ -121,6 +123,8 @@ pub fn create(
             .{ .x = 0, .y = 0, .z = 1 },
         ),
     };
+    instance.panels[0].name = "left";
+    instance.panels[1].name = "right";
     instance.folds = .{
         wrench.fold(panelId(.left), panelId(.right), 1, 3, fold_angle_rad, .toward_inside),
     };

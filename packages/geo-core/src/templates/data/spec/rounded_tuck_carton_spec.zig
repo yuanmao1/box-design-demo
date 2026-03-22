@@ -1,0 +1,699 @@
+// Generated from "src/templates/data/json/rounded_tuck_carton.json" by packages/geo-core/tools/template_json_to_spec.zig.
+// Edit the JSON source, then regenerate this file.
+const compiled_spec = @import("../../compiled_spec.zig");
+const cv2 = compiled_spec.cv2;
+const cs = compiled_spec.cs;
+
+const Panel = enum(u16) {
+    front_wall = 0,
+    bottom = 1,
+    back_wall = 2,
+    top_lid = 3,
+    top_lid_tuck = 4,
+    dust_flap_left = 5,
+    dust_flap_right = 6,
+    side_outer_left = 7,
+    side_inner_left = 8,
+    side_dust_top_left = 9,
+    side_dust_bottom_left = 10,
+    side_outer_right = 11,
+    side_inner_right = 12,
+    side_dust_top_right = 13,
+    side_dust_bottom_right = 14,
+};
+
+fn p(key: Panel) u16 {
+    return @intFromEnum(key);
+}
+
+pub const spec: compiled_spec.TemplateSpec = .{
+    .key = "folding_carton.rounded_tuck_carton",
+    .label = "Roll End Tuck Front Mailer Box",
+    .numeric_params = &.{
+        .{
+            .key = "target_width",
+            .label = "Box Width",
+            .default_value = 360,
+            .min_value = 1,
+        },
+        .{
+            .key = "target_depth",
+            .label = "Box Depth",
+            .default_value = 300,
+            .min_value = 1,
+        },
+        .{
+            .key = "target_height",
+            .label = "Box Height",
+            .default_value = 100,
+            .min_value = 1,
+        },
+        .{
+            .key = "wall_angle_rad",
+            .label = "Wall Angle",
+            .default_value = 1.5707963267948966,
+            .min_value = -3.141592653589793,
+            .max_value = 3.141592653589793,
+        },
+        .{
+            .key = "lid_angle_rad",
+            .label = "Lid Angle",
+            .default_value = 1.7278759594743864,
+            .min_value = -3.141592653589793,
+            .max_value = 3.141592653589793,
+        },
+        .{
+            .key = "tuck_angle_rad",
+            .label = "Tuck Angle",
+            .default_value = 1.5707963267948966,
+            .min_value = -3.141592653589793,
+            .max_value = 3.141592653589793,
+        },
+        .{
+            .key = "roll_fold_angle_rad",
+            .label = "Roll Fold Angle",
+            .default_value = 3.141592653589793,
+            .min_value = -3.141592653589793,
+            .max_value = 3.141592653589793,
+        },
+    },
+    .variables = &.{
+        .{ .name = "w", .expr = "target_width" },
+        .{ .name = "d", .expr = "target_depth" },
+        .{ .name = "h", .expr = "target_height" },
+        .{ .name = "tuck_len", .expr = "h * 0.8" },
+        .{ .name = "dust_outset", .expr = "h * 1.2" },
+        .{ .name = "dust_curve_inset", .expr = "h * 0.8" },
+        .{ .name = "side_dust_bevel", .expr = "h * 0.2" },
+        .{ .name = "x0", .expr = "-h * 2" },
+        .{ .name = "x1", .expr = "-h" },
+        .{ .name = "x2", .expr = "w - w" },
+        .{ .name = "x3", .expr = "w" },
+        .{ .name = "x4", .expr = "w + h" },
+        .{ .name = "x5", .expr = "w + h * 2" },
+        .{ .name = "x_dust_left", .expr = "-dust_outset" },
+        .{ .name = "x_dust_right", .expr = "w + dust_outset" },
+        .{ .name = "y0", .expr = "d - d" },
+        .{ .name = "y1", .expr = "tuck_len" },
+        .{ .name = "y2", .expr = "tuck_len + h" },
+        .{ .name = "y3", .expr = "tuck_len + h + d" },
+        .{ .name = "y4", .expr = "tuck_len + h + d + h" },
+        .{ .name = "y5", .expr = "tuck_len + h + d + h + d" },
+        .{ .name = "y6", .expr = "tuck_len + h + d + h + d + tuck_len" },
+        .{ .name = "y_left_notch1_bottom", .expr = "y2 + h * 0.6" },
+        .{ .name = "y_left_notch1_top", .expr = "y2 + h" },
+        .{ .name = "y_left_notch2_bottom", .expr = "y2 + d * 0.2" },
+        .{ .name = "y_left_notch2_top", .expr = "y2 + d * 0.2 + h * 0.4" },
+        .{ .name = "y_left_notch3_bottom", .expr = "y2 + d * 0.6" },
+        .{ .name = "y_left_notch3_top", .expr = "y2 + d * 0.6 + h * 0.4" },
+        .{ .name = "y_right_notch1_bottom", .expr = "y2 + d * 0.2" },
+        .{ .name = "y_right_notch1_top", .expr = "y2 + d * 0.2 + h * 0.4" },
+        .{ .name = "y_right_notch2_bottom", .expr = "y2 + d * 0.6" },
+        .{ .name = "y_right_notch2_top", .expr = "y2 + d * 0.6 + h * 0.4" },
+        .{ .name = "y_right_notch3_bottom", .expr = "y2 + d * 0.6666666667" },
+        .{ .name = "y_right_notch3_top", .expr = "y2 + d * 0.6666666667 + h * 0.4" },
+        .{ .name = "y_dust_top_start", .expr = "y4 + dust_curve_inset" },
+        .{ .name = "y_dust_top_end", .expr = "y5 - dust_curve_inset" },
+    },
+    .panels = &.{
+        .{
+            .id = p(.front_wall),
+            .name = "front_wall",
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .id = p(.bottom),
+            .name = "bottom",
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .id = p(.back_wall),
+            .name = "back_wall",
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } } },
+            },
+        },
+        .{
+            .id = p(.top_lid),
+            .name = "top_lid",
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } } },
+            },
+        },
+        .{
+            .id = p(.top_lid_tuck),
+            .name = "top_lid_tuck",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5 + h * 0.4" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5 + h * 0.4" } },
+                    .p1 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5 + h * 0.7" } },
+                    .p2 = .{ .x = .{ .expr = "x3 - h * 0.2" }, .y = .{ .expr = "y6" } },
+                    .p3 = .{ .x = .{ .expr = "x3 - h * 0.4" }, .y = .{ .expr = "y6" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x3 - h * 0.4" }, .y = .{ .expr = "y6" } }, .to = .{ .x = .{ .expr = "x2 + h * 0.4" }, .y = .{ .expr = "y6" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x2 + h * 0.4" }, .y = .{ .expr = "y6" } },
+                    .p1 = .{ .x = .{ .expr = "x2 + h * 0.2" }, .y = .{ .expr = "y6" } },
+                    .p2 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5 + h * 0.7" } },
+                    .p3 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5 + h * 0.4" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5 + h * 0.4" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } } },
+            },
+        },
+        .{
+            .id = p(.dust_flap_left),
+            .name = "dust_flap_left",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_left + h * 0.7" }, .y = .{ .expr = "y5" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y5 - h * 0.4" } },
+                    .p3 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_end" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_end" } }, .to = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_start" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_start" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y4 + h * 0.4" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_left + h * 0.7" }, .y = .{ .expr = "y4" } },
+                    .p3 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } },
+                },
+            },
+        },
+        .{
+            .id = p(.dust_flap_right),
+            .name = "dust_flap_right",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_right - h * 0.7" }, .y = .{ .expr = "y4" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y4 + h * 0.4" } },
+                    .p3 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_start" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_start" } }, .to = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_end" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_end" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y5 - h * 0.4" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_right - h * 0.7" }, .y = .{ .expr = "y5" } },
+                    .p3 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } },
+                },
+            },
+        },
+        .{
+            .id = p(.side_outer_left),
+            .name = "side_outer_left",
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .id = p(.side_inner_left),
+            .name = "side_inner_left",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .id = p(.side_dust_top_left),
+            .name = "side_dust_top_left",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .id = p(.side_dust_bottom_left),
+            .name = "side_dust_bottom_left",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .id = p(.side_outer_right),
+            .name = "side_outer_right",
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .id = p(.side_inner_right),
+            .name = "side_inner_right",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .id = p(.side_dust_top_right),
+            .name = "side_dust_top_right",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .id = p(.side_dust_bottom_right),
+            .name = "side_dust_bottom_right",
+            .accepts_content = false,
+            .boundary = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+    },
+    .folds = &.{
+        .{
+            .from_panel_id = p(.bottom),
+            .to_panel_id = p(.front_wall),
+            .from_segment_index = 1,
+            .to_segment_index = 3,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.bottom),
+            .to_panel_id = p(.back_wall),
+            .from_segment_index = 3,
+            .to_segment_index = 1,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.back_wall),
+            .to_panel_id = p(.top_lid),
+            .from_segment_index = 3,
+            .to_segment_index = 1,
+            .angle_rad = 0,
+            .angle_expr = "lid_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.top_lid),
+            .to_panel_id = p(.top_lid_tuck),
+            .from_segment_index = 3,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "tuck_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.top_lid),
+            .to_panel_id = p(.dust_flap_left),
+            .from_segment_index = 0,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.top_lid),
+            .to_panel_id = p(.dust_flap_right),
+            .from_segment_index = 2,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.bottom),
+            .to_panel_id = p(.side_outer_left),
+            .from_segment_index = 0,
+            .to_segment_index = 2,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.side_outer_left),
+            .to_panel_id = p(.side_inner_left),
+            .from_segment_index = 0,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "roll_fold_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.side_outer_left),
+            .to_panel_id = p(.side_dust_top_left),
+            .from_segment_index = 1,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.side_outer_left),
+            .to_panel_id = p(.side_dust_bottom_left),
+            .from_segment_index = 3,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.bottom),
+            .to_panel_id = p(.side_outer_right),
+            .from_segment_index = 2,
+            .to_segment_index = 3,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.side_outer_right),
+            .to_panel_id = p(.side_inner_right),
+            .from_segment_index = 1,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "roll_fold_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.side_outer_right),
+            .to_panel_id = p(.side_dust_top_right),
+            .from_segment_index = 0,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+        .{
+            .from_panel_id = p(.side_outer_right),
+            .to_panel_id = p(.side_dust_bottom_right),
+            .from_segment_index = 2,
+            .to_segment_index = 0,
+            .angle_rad = 0,
+            .angle_expr = "wall_angle_rad",
+            .direction = .toward_inside,
+        },
+    },
+    .linework = &.{
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } } },
+            },
+        },
+        .{
+            .role = .fold,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5 + h * 0.4" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5 + h * 0.4" } },
+                    .p1 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5 + h * 0.7" } },
+                    .p2 = .{ .x = .{ .expr = "x3 - h * 0.2" }, .y = .{ .expr = "y6" } },
+                    .p3 = .{ .x = .{ .expr = "x3 - h * 0.4" }, .y = .{ .expr = "y6" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x3 - h * 0.4" }, .y = .{ .expr = "y6" } }, .to = .{ .x = .{ .expr = "x2 + h * 0.4" }, .y = .{ .expr = "y6" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x2 + h * 0.4" }, .y = .{ .expr = "y6" } },
+                    .p1 = .{ .x = .{ .expr = "x2 + h * 0.2" }, .y = .{ .expr = "y6" } },
+                    .p2 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5 + h * 0.7" } },
+                    .p3 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5 + h * 0.4" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5 + h * 0.4" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y5" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_left + h * 0.7" }, .y = .{ .expr = "y5" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y5 - h * 0.4" } },
+                    .p3 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_end" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_end" } }, .to = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_start" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y_dust_top_start" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_left" }, .y = .{ .expr = "y4 + h * 0.4" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_left + h * 0.7" }, .y = .{ .expr = "y4" } },
+                    .p3 = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } },
+                },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_right - h * 0.7" }, .y = .{ .expr = "y4" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y4 + h * 0.4" } },
+                    .p3 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_start" } },
+                },
+                .{ .from = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_start" } }, .to = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_end" } } },
+                .{
+                    .kind = .bezier,
+                    .p0 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y_dust_top_end" } },
+                    .p1 = .{ .x = .{ .expr = "x_dust_right" }, .y = .{ .expr = "y5 - h * 0.4" } },
+                    .p2 = .{ .x = .{ .expr = "x_dust_right - h * 0.7" }, .y = .{ .expr = "y5" } },
+                    .p3 = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y5" } },
+                },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch3_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch3_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_top" } }, .to = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0 - h * 0.2" }, .y = .{ .expr = "y_left_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y_left_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x0" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y1" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y1" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x1" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y2" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch1_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch1_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_bottom" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_bottom" } }, .to = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5 + h * 0.2" }, .y = .{ .expr = "y_right_notch2_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_top" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y_right_notch2_top" } }, .to = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y3" } } },
+                .{ .from = .{ .x = .{ .expr = "x5" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y2" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y1" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y1" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y1" } } },
+            },
+        },
+        .{
+            .role = .cut,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y3" } }, .to = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y4" } } },
+                .{ .from = .{ .x = .{ .expr = "x4" }, .y = .{ .expr = "y4" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y4" } } },
+            },
+        },
+        .{
+            .role = .guide,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2 + h * 0.6" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2 + h" } } },
+            },
+        },
+        .{
+            .role = .guide,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2 + d * 0.6666666667" } }, .to = .{ .x = .{ .expr = "x2" }, .y = .{ .expr = "y2 + d * 0.6666666667 + h * 0.4" } } },
+            },
+        },
+        .{
+            .role = .guide,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2 + h * 0.6" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2 + h" } } },
+            },
+        },
+        .{
+            .role = .guide,
+            .segments = &.{
+                .{ .from = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2 + d * 0.6666666667" } }, .to = .{ .x = .{ .expr = "x3" }, .y = .{ .expr = "y2 + d * 0.6666666667 + h * 0.4" } } },
+            },
+        },
+    },
+};

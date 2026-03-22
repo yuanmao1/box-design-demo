@@ -15,6 +15,20 @@ function rectanglePath(x: number, y: number, width: number, height: number): Pat
 function sampleDrawing(): Drawing2DResult {
   const panel = rectanglePath(0, 0, 80, 40)
   return {
+    panels: [
+      {
+        panel_id: 0,
+        name: 'test_panel',
+        boundary: panel,
+        content_region: panel,
+        surface_frame: {
+          origin: { x: 0, y: 0 },
+          u_axis: { x: 80, y: 0 },
+          v_axis: { x: 0, y: 40 },
+        },
+        accepts_content: true,
+      },
+    ],
     linework: [
       {
         role: 'cut',
@@ -22,7 +36,7 @@ function sampleDrawing(): Drawing2DResult {
         path: panel,
       },
       {
-        role: 'score',
+        role: 'fold',
         stroke_style: 'dashed',
         path: {
           closed: false,
@@ -67,7 +81,7 @@ describe('dieline view helpers', () => {
     expect(bounds.maxY).toBe(40)
   })
 
-  test('computePanelRects identifies closed cut paths as panels', () => {
+  test('computePanelRects uses exported drawing panels', () => {
     const panelRects = computePanelRects(sampleDrawing())
     expect(panelRects).toHaveLength(1)
     expect(panelRects[0]?.panelId).toBe(0)
