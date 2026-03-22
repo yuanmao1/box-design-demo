@@ -39,6 +39,7 @@ fn evy(x_val: f64, comptime y_expr: []const u8) compiled_spec.RuntimeVec2Spec {
 const Generated = compiled_spec.defineTemplate(.{
     .key = "folding_carton.mailer_box",
     .label = "Mailer Box",
+    .thickness = 1.5,
     .numeric_params = &.{
         .{ .key = "length", .label = "Length", .default_value = 95, .min_value = 1 },
         .{ .key = "width", .label = "Width", .default_value = 78, .min_value = 1 },

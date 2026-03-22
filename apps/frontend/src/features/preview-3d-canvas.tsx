@@ -7,6 +7,7 @@ import {
   ClampToEdgeWrapping,
   CanvasTexture,
   DoubleSide,
+  ExtrudeGeometry,
   Float32BufferAttribute,
   LinearFilter,
   Line as ThreeLine,
@@ -22,6 +23,7 @@ import { pathToShape } from "@/lib/geometry";
 import { loadPanelTextureCanvas } from "@/lib/panel-texture";
 import { pathBounds } from "@/lib/geometry";
 import {
+  applyExtrudedUv,
   applySurfaceFrameUv,
   buildPreviewSceneData,
   fallbackSurfaceFrame,
@@ -84,7 +86,7 @@ export function Preview3DCanvas({
           ]}
         >
           {sceneData.nodes.map((sceneNode) => (
-            <PanelNode key={sceneNode.index} sceneNode={sceneNode} />
+            <PanelNode key={sceneNode.index} sceneNode={sceneNode} thickness={sceneData.thickness} />
           ))}
         </group>
       </Canvas>
@@ -94,9 +96,13 @@ export function Preview3DCanvas({
 
 function PanelNode({
   sceneNode,
+  thickness,
 }: {
   sceneNode: NonNullable<ReturnType<typeof buildPreviewSceneData>>["nodes"][number];
+  thickness: number;
 }) {
+  const useExtrude = thickness > 0;
+
   const frame = useMemo(() => {
     if (sceneNode.node.surface_frame) return sceneNode.node.surface_frame;
     return sceneNode.node.boundary
@@ -106,17 +112,37 @@ function PanelNode({
 
   const geometry = useMemo(() => {
     if (!sceneNode.node.boundary || !frame) return null;
+    const shape = pathToShape(sceneNode.node.boundary);
 
-    const indexedGeometry = new ShapeGeometry(
-      pathToShape(sceneNode.node.boundary),
-    );
-    const nextGeometry = indexedGeometry.toNonIndexed();
-    indexedGeometry.dispose();
+    if (!useExtrude) {
+      const indexedGeometry = new ShapeGeometry(shape);
+      const nextGeometry = indexedGeometry.toNonIndexed();
+      indexedGeometry.dispose();
+      applySurfaceFrameUv(nextGeometry, frame);
+      nextGeometry.computeVertexNormals();
+      return nextGeometry;
+    }
 
-    applySurfaceFrameUv(nextGeometry, frame);
-    nextGeometry.computeVertexNormals();
-    return nextGeometry;
-  }, [frame, sceneNode.node.boundary]);
+    // Extruded geometry for thick panels
+    // ExtrudeGeometry extrudes from Z=0 along +Z. The front cap at Z=0 has
+    // normal {0,0,-1}. If the panel's outside_normal.z > 0 (outside faces +Z),
+    // the outer surface is the back cap — translate so it lands at Z=0.
+    const nz = sceneNode.node.outside_normal?.z ?? -1;
+    const indexed = new ExtrudeGeometry(shape, {
+      depth: thickness,
+      bevelEnabled: false,
+    });
+    if (nz > 0) {
+      indexed.translate(0, 0, -thickness);
+    }
+    const extruded = indexed.toNonIndexed();
+    indexed.dispose();
+    applyExtrudedUv(extruded, frame);
+    extruded.computeVertexNormals();
+    // Assign material groups by face normal: cap faces (|nz|>0.5) = group 0, side faces = group 1
+    assignExtrudeMaterialGroups(extruded);
+    return extruded;
+  }, [frame, sceneNode.node.boundary, thickness, useExtrude]);
 
   const outlineGeometry = useMemo(
     () => buildOutlineGeometry(sceneNode.outlinePoints),
@@ -138,6 +164,23 @@ function PanelNode({
     return line;
   }, [outlineGeometry, sceneNode.worldMatrix]);
   const texture = usePanelTexture(sceneNode);
+
+  const materials = useMemo(() => {
+    if (!useExtrude) return null;
+    // ExtrudeGeometry groups: materialIndex 0 = caps (front+back), materialIndex 1 = sides
+    const capMaterial = new MeshBasicMaterial({
+      color: "#ffffff",
+      map: texture ?? null,
+      side: DoubleSide,
+      toneMapped: false,
+    });
+    const sideMaterial = new MeshBasicMaterial({
+      color: "#c4a86a",
+      side: DoubleSide,
+      toneMapped: false,
+    });
+    return [capMaterial, sideMaterial];
+  }, [texture, useExtrude]);
 
   useEffect(() => {
     if (!geometry || !frame) return;
@@ -165,16 +208,19 @@ function PanelNode({
         geometry={geometry}
         matrix={sceneNode.worldMatrix}
         matrixAutoUpdate={false}
+        material={useExtrude ? materials ?? undefined : undefined}
         renderOrder={1}
       >
-        <meshBasicMaterial
-          key={`panel-material-${sceneNode.index}-${texture?.uuid ?? "empty"}`}
-          color="#ffffff"
-          map={texture ?? null}
-          needsUpdate
-          side={DoubleSide}
-          toneMapped={false}
-        />
+        {!useExtrude && (
+          <meshBasicMaterial
+            key={`panel-material-${sceneNode.index}-${texture?.uuid ?? "empty"}`}
+            color="#ffffff"
+            map={texture ?? null}
+            needsUpdate
+            side={DoubleSide}
+            toneMapped={false}
+          />
+        )}
       </mesh>
       {outline ? <primitive dispose={null} object={outline} /> : null}
     </>
@@ -437,6 +483,41 @@ function usePanelTexture(
   }, [invalidate, sceneNode.contents, sceneNode.node]);
 
   return texture;
+}
+
+function assignExtrudeMaterialGroups(geometry: BufferGeometry) {
+  const normals = geometry.getAttribute("normal");
+  const vertexCount = normals.count;
+  const faceCount = vertexCount / 3;
+
+  geometry.clearGroups();
+
+  // Collect faces into cap (materialIndex 0) and side (materialIndex 1) buckets
+  const capFaces: number[] = [];
+  const sideFaces: number[] = [];
+
+  for (let f = 0; f < faceCount; f++) {
+    const base = f * 3;
+    const nz0 = normals.getZ(base);
+    const nz1 = normals.getZ(base + 1);
+    const nz2 = normals.getZ(base + 2);
+    const avgNz = (nz0 + nz1 + nz2) / 3;
+
+    if (Math.abs(avgNz) > 0.5) {
+      capFaces.push(f);
+    } else {
+      sideFaces.push(f);
+    }
+  }
+
+  // Add contiguous groups for caps
+  for (const f of capFaces) {
+    geometry.addGroup(f * 3, 3, 0);
+  }
+  // Add contiguous groups for sides
+  for (const f of sideFaces) {
+    geometry.addGroup(f * 3, 3, 1);
+  }
 }
 
 function buildOutlineGeometry(points: [number, number, number][]) {

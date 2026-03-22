@@ -29,6 +29,7 @@ fn p(key: Panel) u16 {
 pub const spec: compiled_spec.TemplateSpec = .{
     .key = "folding_carton.rounded_tuck_carton",
     .label = "Roll End Tuck Front Mailer Box",
+    .thickness = 0.5,
     .numeric_params = &.{
         .{
             .key = "target_width",

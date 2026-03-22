@@ -130,6 +130,7 @@ export interface Preview3DNode {
 export interface Preview3DResult {
   nodes: Preview3DNode[]
   contents: OutputContentPlacement[]
+  thickness: number
 }
 
 export interface GeneratedPackage {

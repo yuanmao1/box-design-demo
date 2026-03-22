@@ -111,6 +111,7 @@ function sampleResult(): Preview3DResult {
         },
       } satisfies OutputContentPlacement,
     ],
+    thickness: 0,
   };
 }
 

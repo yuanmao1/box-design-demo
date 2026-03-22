@@ -23,9 +23,9 @@ function callGenerate(params) {
   const input = enc.encode(JSON.stringify(params))
   const ptr = ex.allocate(input.length)
   new Uint8Array(ex.memory.buffer).set(input, ptr)
-  const rc = ex.generate_model(ptr, input.length)
+  const rc = ex.generate_package(ptr, input.length)
   ex.deallocate(ptr, input.length)
-  if (rc !== 0) throw new Error(`generate_model returned ${rc}`)
+  if (rc !== 0) throw new Error(`generate_package returned ${rc}`)
   const rp = ex.get_result_ptr()
   const rl = ex.get_result_len()
   const json = new TextDecoder().decode(new Uint8Array(ex.memory.buffer).slice(rp, rp + rl))
@@ -35,7 +35,7 @@ function callGenerate(params) {
 
 // ── Test 1: exports ─────────────────────────────────────────
 console.log('=== Test 1: Verify exports ===')
-for (const name of ['memory','allocate','deallocate','generate_model','get_result_ptr','get_result_len','free_result']) {
+for (const name of ['memory','allocate','deallocate','generate_package','get_result_ptr','get_result_len','free_result']) {
   check(`export "${name}"`, name in ex)
 }
 

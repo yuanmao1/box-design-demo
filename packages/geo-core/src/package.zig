@@ -74,6 +74,7 @@ pub const Preview3DNode = struct {
 pub const Preview3DResult = struct {
     nodes: []const Preview3DNode,
     contents: []const types.PanelContentPlacement = &.{},
+    thickness: f64 = 0,
 
     pub fn deinit(self: *Preview3DResult, allocator: std.mem.Allocator) void {
         allocator.free(self.nodes);
@@ -89,16 +90,19 @@ pub const FoldingCartonModel = struct {
     folds: []const types.Fold,
     linework: []const types.StyledPath2D,
     contents: []const types.PanelContentPlacement = &.{},
+    thickness: f64 = 0,
 
     pub fn init(
         panels: []const types.Panel,
         folds: []const types.Fold,
         linework: []const types.StyledPath2D,
+        thickness: f64,
     ) FoldingCartonModel {
         return .{
             .panels = panels,
             .folds = folds,
             .linework = linework,
+            .thickness = thickness,
         };
     }
 
@@ -209,6 +213,7 @@ pub const FoldingCartonModel = struct {
         return .{
             .nodes = nodes,
             .contents = self.contents,
+            .thickness = self.thickness,
         };
     }
 
@@ -999,6 +1004,7 @@ test "folding carton honors explicit content region" {
         },
         &.{},
         &.{},
+        0,
     );
 
     var contents = [_]types.PanelContentPlacement{
@@ -1074,6 +1080,7 @@ test "fold validation rejects misaligned hinge edges" {
             },
         },
         &.{},
+        0,
     );
 
     try std.testing.expectError(
@@ -1126,6 +1133,7 @@ test "fold direction derives opposite signed rotations for inside versus outside
             },
         },
         &.{},
+        0,
     );
     var outside_preview = try outside_model.buildPreview3D(std.testing.allocator);
     defer outside_preview.deinit(std.testing.allocator);
@@ -1145,6 +1153,7 @@ test "fold direction derives opposite signed rotations for inside versus outside
             },
         },
         &.{},
+        0,
     );
     var inside_preview = try inside_model.buildPreview3D(std.testing.allocator);
     defer inside_preview.deinit(std.testing.allocator);
@@ -1201,6 +1210,7 @@ test "fold sign stays stable when parent and child traversal is reversed" {
             },
         },
         &.{},
+        0,
     );
     var left_root_preview = try left_root_model.buildPreview3D(std.testing.allocator);
     defer left_root_preview.deinit(std.testing.allocator);
@@ -1220,6 +1230,7 @@ test "fold sign stays stable when parent and child traversal is reversed" {
             },
         },
         &.{},
+        0,
     );
     var reversed_preview = try reversed_model.buildPreview3D(std.testing.allocator);
     defer reversed_preview.deinit(std.testing.allocator);

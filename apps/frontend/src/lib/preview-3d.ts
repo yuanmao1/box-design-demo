@@ -36,6 +36,7 @@ export interface PreviewSceneData {
   center: Vec3;
   radius: number;
   nodes: PreviewSceneNode[];
+  thickness: number;
 }
 
 export function buildPreviewSceneData(result: Preview3DResult | null) {
@@ -95,7 +96,12 @@ export function buildPreviewSceneData(result: Preview3DResult | null) {
       panelBounds: safePanelBounds(node),
       outlinePoints: node.boundary
         ? samplePath(node.boundary, 36).map(
-            (point) => [point.x, point.y, 0.45] as [number, number, number],
+            (point) =>
+              [
+                point.x,
+                point.y,
+                (result.thickness ?? 0) > 0 ? 0.1 : 0.45,
+              ] as [number, number, number],
           )
         : [],
     } satisfies PreviewSceneNode;
@@ -118,6 +124,7 @@ export function buildPreviewSceneData(result: Preview3DResult | null) {
     center: { x: centerVector.x, y: centerVector.y, z: centerVector.z },
     radius: Math.max(radius, 8),
     nodes,
+    thickness: result.thickness ?? 0,
   } satisfies PreviewSceneData;
 }
 
@@ -277,6 +284,35 @@ export function applySurfaceFrameUv(
 
   geometry.setAttribute("uv", new Float32BufferAttribute(uv, 2));
   geometry.computeVertexNormals();
+}
+
+export function applyExtrudedUv(
+  geometry: BufferGeometry,
+  frame: SurfaceFrame2D,
+) {
+  const positions = geometry.getAttribute("position");
+  geometry.computeVertexNormals();
+  const normals = geometry.getAttribute("normal");
+  const uv = new Float32Array(positions.count * 2);
+
+  for (let i = 0; i < positions.count; i++) {
+    const nz = normals ? normals.getZ(i) : 0;
+    if (Math.abs(nz) > 0.5) {
+      // Cap face (front or back): project UV via surface frame
+      const projected = unprojectSurfacePoint(frame, {
+        x: positions.getX(i),
+        y: positions.getY(i),
+      });
+      uv[i * 2] = projected.x;
+      uv[i * 2 + 1] = 1 - projected.y;
+    } else {
+      // Side face: no texture needed
+      uv[i * 2] = 0;
+      uv[i * 2 + 1] = 0;
+    }
+  }
+
+  geometry.setAttribute("uv", new Float32BufferAttribute(uv, 2));
 }
 
 export function computePanelTextureSize(frame: SurfaceFrame2D) {

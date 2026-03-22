@@ -304,6 +304,8 @@ fn writePreview3D(writer: *std.json.Stringify, preview: package.Preview3DResult)
         try writeContentPlacement(writer, content);
     }
     try writer.endArray();
+    try writer.objectField("thickness");
+    try writer.write(preview.thickness);
     try writer.endObject();
 }
 

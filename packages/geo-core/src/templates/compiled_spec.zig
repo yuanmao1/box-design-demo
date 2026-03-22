@@ -116,6 +116,7 @@ pub const TemplateSpec = struct {
     panels: []const PanelSpec,
     folds: []const FoldSpec = &.{},
     linework: []const LineworkSpec = &.{},
+    thickness: f64 = 0,
 };
 
 /// Convenience: create a RuntimeVec2Spec from two constant f64 values.
@@ -282,6 +283,7 @@ pub fn defineTemplate(comptime template_spec: TemplateSpec) type {
                 &instance.panels,
                 &instance.folds,
                 &instance.linework,
+                template_spec.thickness,
             );
             return instance;
         }

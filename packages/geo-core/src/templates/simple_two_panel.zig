@@ -136,6 +136,7 @@ pub fn create(
         &instance.panels,
         &instance.folds,
         &instance.linework,
+        0.5,
     );
 
     return instance;
